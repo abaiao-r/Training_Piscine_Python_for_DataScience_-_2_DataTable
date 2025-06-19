@@ -3,6 +3,10 @@
 ## Introduction
 This project focuses on the ETL (Extract, Transform, Load) process using datasets from Gapminder.org, specifically related to life expectancy and population statistics. The aim is to load, manipulate, and visualize data to gain insights into global health and economic trends. Effective data management and warehousing are crucial for making informed decisions based on data analysis.
 
+    FREE SCHOOL MATERIAL FROM GAPMINDER.ORG, CC-BY LICENSE
+
+
+
 ## Why is Relevant?
 Hands-on experience with real-world datasets enhances understanding of data manipulation and visualization techniques. This project provides practical skills in handling data, which is essential for any data science professional. By working with actual datasets, participants can appreciate the challenges and intricacies of data management.
 
