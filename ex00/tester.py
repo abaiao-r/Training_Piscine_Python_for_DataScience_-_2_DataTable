@@ -14,7 +14,7 @@ def print_result(msg: str, status: str) -> None:
         msg (str): The message to print.
         status (str): The status of the test ('pass', 'fail', 'error').
     """
-  
+
     if status == "pass":
         print(f"{GREEN}[PASS]{RESET} {msg}")
     elif status == "fail":
