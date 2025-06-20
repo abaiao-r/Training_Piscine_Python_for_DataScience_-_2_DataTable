@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+from pandas.core.frame import DataFrame
 from load_csv import load
 
 
@@ -97,69 +98,109 @@ def setup_hover(fig, ax, sc, x_values, y_values, labels) -> None:
     fig.canvas.mpl_connect("motion_notify_event", hover)
 
 
-def plot_gdp_vs_life_expectancy(gdp_df, life_df, year: str) -> None:
+def plot_gdp_vs_life_expectancy(x_values, y_values, labels, year: str) -> None:
     """
     Plots a scatter plot of GDP vs Life Expectancy for a given year with
     interactive hover tooltips.
 
     Parameters:
-        gdp_df: GDP data (from load function)
-        life_df: Life expectancy data (from load function)
+        x_values: List of GDP values.
+        y_values: List of life expectancy values.
+        labels: List of labels for each point.
         year (str): The year to display on the plot.
     """
     try:
-        gdp_data = dataframe_to_dict(gdp_df, year)
-        life_data = dataframe_to_dict(life_df, year)
-
-        # ┌───────────────────────────────────────────────┐
-        # │        Match countries present in both        │
-        # └───────────────────────────────────────────────┘
-        countries = set(gdp_data.keys()) & set(life_data.keys())
-
-        x_values = []
-        y_values = []
-        labels = []
-
-        for country in countries:
-            gdp = gdp_data.get(country)
-            life = life_data.get(country)
-            if gdp is not None and life is not None:
-                x_values.append(gdp)
-                y_values.append(life)
-                labels.append(f"{country}\nGDP: {int(gdp):,}")
-
         if not x_values or not y_values:
             print(f"No valid data to plot for {year}")
             return
-
         fig, ax = plt.subplots(figsize=(10, 6))
         sc = ax.scatter(x_values, y_values, alpha=0.6)
-
         plt.title(f"Life Expectancy vs GDP (PPP) in {year}")
         plt.xlabel("GDP per capita (PPP, inflation-adjusted)")
         plt.ylabel("Life Expectancy (years)")
-
-        # Use log scale and readable numeric labels (no currency symbol)
         plt.xscale("log")
         plt.gca().xaxis.set_major_formatter(
             ticker.FuncFormatter(lambda x, _: f"{int(x):,}")
         )
-
-        # Add grid and display
         plt.grid(False)
         plt.tight_layout()
         setup_hover(fig, ax, sc, x_values, y_values, labels)
         plt.show()
-
-    except KeyError:
-        print(f"Error: Year '{year}' is not available in the dataset.")
     except Exception as e:
         print(f"Unexpected error while plotting: {e}")
 
 
+def clean_dataframe(df, is_life_expectancy=False):
+    """
+    Cleans the DataFrame by setting invalid values to None.
+    For GDP: negative or zero values are set to None.
+    For life expectancy: negative, zero, or >150 values are set to None.
+    """
+    def clean_value(x):
+        try:
+            val = float(x)
+            if val <= 0:
+                return None
+            if is_life_expectancy and val > 150:
+                return None
+            return val
+        except Exception:
+            return None
+    return df.map(clean_value)
+
+
+def extract_data(
+    gdp_file, life_file
+) -> tuple[None, None] | tuple[DataFrame, DataFrame]:
+    """
+    Loads the GDP and life expectancy data from CSV files.
+    Returns: (gdp_data, life_data) DataFrames or (None, None) if loading fails.
+    """
+    gdp_data = load(gdp_file)
+    life_data = load(life_file)
+    if gdp_data is None or life_data is None:
+        print("Failed to load one or both datasets.")
+        return None, None
+    return gdp_data, life_data
+
+
+def clean_data(gdp_data, life_data):
+    """
+    Cleans GDP and life expectancy DataFrames.
+    Returns: (clean_gdp, clean_life)
+    """
+    clean_gdp = clean_dataframe(gdp_data)
+    clean_life = clean_dataframe(life_data, is_life_expectancy=True)
+    return clean_gdp, clean_life
+
+
+def display_data(gdp_data, life_data, years) -> None:
+    """
+    Prepares and displays the plot for the given years.
+    """
+    for year in years:
+        try:
+            gdp_dict = dataframe_to_dict(gdp_data, year)
+            life_dict = dataframe_to_dict(life_data, year)
+            countries = set(gdp_dict.keys()) & set(life_dict.keys())
+            x_values = []
+            y_values = []
+            labels = []
+            for country in countries:
+                gdp = gdp_dict.get(country)
+                life = life_dict.get(country)
+                if gdp is not None and life is not None:
+                    x_values.append(gdp)
+                    y_values.append(life)
+                    labels.append(f"{country}\nGDP: {int(gdp):,}")
+            plot_gdp_vs_life_expectancy(x_values, y_values, labels, year)
+        except Exception as e:
+            print(f"Unexpected error while processing year {year}: {e}")
+
+
 def main() -> None:
     """
-    Main function to load data and visualize projections over several years.
+    Main function to extract, clean, and display data.
     """
     try:
         # Dataset paths
@@ -167,22 +208,12 @@ def main() -> None:
             "../income_per_person_gdppercapita_ppp_inflation_adjusted.csv"
         )
         life_file = "../life_expectancy_years.csv"
-
-        # Load data using pandas (allowed in load function only)
-        gdp_data = load(gdp_file)
-        life_data = load(life_file)
-
+        years = ["1900"]
+        gdp_data, life_data = extract_data(gdp_file, life_file)
         if gdp_data is None or life_data is None:
-            print("Failed to load one or both datasets.")
             return
-
-        # Plot for multiple years
-        years = [
-            "1900",
-        ]
-        for year in years:
-            plot_gdp_vs_life_expectancy(gdp_data, life_data, year)
-
+        gdp_data, life_data = clean_data(gdp_data, life_data)
+        display_data(gdp_data, life_data, years)
     except Exception as e:
         print(f"Unexpected error in main: {e}")
 
