@@ -65,7 +65,7 @@ def display_population_comparison(country1: str, country2: str) -> None:
         plt.xlabel("Year")
         plt.ylabel("Population (in millions)")
         plt.legend()
-        plt.grid(True)
+        plt.grid(False)
         plt.tight_layout()
         plt.show()
 
